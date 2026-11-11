@@ -1,0 +1,1141 @@
+{
+  "info": {
+    "_postman_id": "9f5b0283-1f22-46f3-b429-bf004ad4f8fd",
+    "name": "DPLA API (Digital Public Library of America)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Digital Public Library of America API v2: about 50M items from US libraries, archives, museums and state digital libraries.\n\n**Setup:** run *0. Get an API key → Request a free API key* with your email, then paste the emailed key into the collection variable `dpla_api_key`. The collection auth then adds `api_key` to every request.\n\nDocs: https://pro.dp.la/developers"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "api_key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{dpla_api_key}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "query",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "0. Get an API key",
+      "id": "1db5a0dc-6375-44fb-8f5e-c2b7584a7db2",
+      "item": [
+        {
+          "name": "Request a free API key (POST)",
+          "id": "340d36a5-2789-4255-bc75-b7d27405ddb2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/api_key/{{email}}",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "api_key",
+                "{{email}}"
+              ],
+              "query": []
+            },
+            "description": "One-time: **you** run this with your own email address. DPLA emails the 32-character key. Paste it into the collection variable **dpla_api_key**. An empty JSON reply or a message means the email was sent.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "★ Search items",
+      "id": "86af3df4-eafb-48b6-8e4f-fbddc079c1d5",
+      "item": [
+        {
+          "name": "Search items (keyword)",
+          "id": "91d75e57-24db-49e2-9697-e94bb1e0704e",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&page_size=50&page=1",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": "Keywords; AND/OR; wildcards*"
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false,
+                  "description": "1–100"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "",
+                  "disabled": true,
+                  "description": "e.g. sourceResource.date.begin"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "asc",
+                  "disabled": true,
+                  "description": "asc|desc"
+                },
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "comma list, e.g. sourceResource.title,isShownAt"
+                }
+              ]
+            },
+            "description": "Searches about 50M items from US libraries, archives and museums. Requires api_key, which the collection auth adds."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "★ Title contains phrase",
+          "id": "c953ac85-fc1a-4bd7-860b-ce4415dade93",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?sourceResource.title=\"{{phrase}}\"&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "sourceResource.title",
+                  "value": "\"{{phrase}}\"",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "★ Obituaries / family notices (description)",
+          "id": "30c1c95c-dd03-4040-9366-9e53d70edb60",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&sourceResource.description=obituary OR obituaries OR funeral&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sourceResource.description",
+                  "value": "obituary OR obituaries OR funeral",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "★ Genealogy subject",
+          "id": "f11de420-de6c-4fcc-8782-1882ae551dcf",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&sourceResource.subject.name=Genealogy OR \"Family histories\" OR Immigrants&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sourceResource.subject.name",
+                  "value": "Genealogy OR \"Family histories\" OR Immigrants",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": "Combine a surname with genealogy subject headings."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "★ Date range (1880–1930)",
+          "id": "0a9d832c-afc1-4e55-bea9-bbf6f5716ba9",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&sourceResource.date.after=1880&sourceResource.date.before=1930&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sourceResource.date.after",
+                  "value": "1880",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sourceResource.date.before",
+                  "value": "1930",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "★ Place (city / county / state)",
+          "id": "7fd6a633-07a5-454a-8cf5-adbc9d936a35",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&sourceResource.spatial={{place}}&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sourceResource.spatial",
+                  "value": "{{place}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": "e.g. Passaic, Cleveland, Pennsylvania"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "By US state",
+          "id": "925a6e2c-25ba-4214-9bbc-63b40bab0548",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&sourceResource.spatial.state={{state}}&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sourceResource.spatial.state",
+                  "value": "{{state}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": "State names are spelled out in full."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "By type (image / text / moving image …)",
+          "id": "727162ee-bf97-448b-8bfa-e296239962d7",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&sourceResource.type=image&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sourceResource.type",
+                  "value": "image",
+                  "disabled": false,
+                  "description": "case-sensitive: image | text | moving image | sound | physical object"
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "By contributing institution (exact)",
+          "id": "ed0b48e2-cbac-4b9a-8479-e4816d1aa1f9",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&provider.name={{provider}}&exact_field_match=true&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "provider.name",
+                  "value": "{{provider}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "exact_field_match",
+                  "value": "true",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": "Exact match on provider name, e.g. \"Digital Library of Georgia\"."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Facets only (counts)",
+          "id": "51f2411c-f421-4448-a642-0de64b32efc9",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&page_size=0&facets=provider.name,sourceResource.type,sourceResource.spatial.state,sourceResource.date.begin&facet_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "0",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "facets",
+                  "value": "provider.name,sourceResource.type,sourceResource.spatial.state,sourceResource.date.begin",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "facet_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Use the facet values to refine searches."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sorted oldest first",
+          "id": "8adcf65d-6b46-463e-89f3-e0f591e75013",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&sort_by=sourceResource.date.begin&sort_order=asc&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sort_by",
+                  "value": "sourceResource.date.begin",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sort_order",
+                  "value": "asc",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nearest to a point",
+          "id": "7368627d-a05f-4e88-9e86-6ff6e4d3da1f",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?q={{query}}&sort_by_pin={{lat}},{{lon}}&sort_by=sourceResource.spatial.coordinates&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sort_by_pin",
+                  "value": "{{lat}},{{lon}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "sort_by",
+                  "value": "sourceResource.spatial.coordinates",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": "Results sorted by distance from lat,lon."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Items",
+      "id": "bc635f1a-49b8-4931-a89c-078de10820fe",
+      "item": [
+        {
+          "name": "Get item by id",
+          "id": "3fa89c76-0f70-48dc-a04b-2a2c2d96d19a",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items/{{item_id}}",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items",
+                "{{item_id}}"
+              ],
+              "query": []
+            },
+            "description": "id comes from a search result (docs[].id)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get several items",
+          "id": "4d2594ee-0bbf-4d4b-b435-6bb7b446748c",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items/{{item_id}},{{item_id_2}}",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items",
+                "{{item_id}},{{item_id_2}}"
+              ],
+              "query": []
+            },
+            "description": "Up to 50 comma-separated ids."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Collections",
+      "id": "7a3dce84-089f-45f8-86b5-bcb0dfd9a3f3",
+      "item": [
+        {
+          "name": "Search collections",
+          "id": "d0ffe447-b001-4c1f-a9e0-510bc23e81cb",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/collections?q={{query}}&page_size=25",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "collections"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "25",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get collection by id",
+          "id": "7a8310c6-c902-4cf7-8d64-07978ecb7f1a",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/collections/{{collection_id}}",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "collections",
+                "{{collection_id}}"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Items in a collection (by title)",
+          "id": "10acfcb4-792d-4af9-8d0f-90f1498378b0",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{dpla_api}}/v2/items?sourceResource.collection.title={{collection_title}}&page_size=50",
+              "host": [
+                "{{dpla_api}}"
+              ],
+              "path": [
+                "v2",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "sourceResource.collection.title",
+                  "value": "{{collection_title}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "page_size",
+                  "value": "50",
+                  "disabled": false,
+                  "description": "max 500"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const A=v=>Array.isArray(v)?v.join('; '):(v||'');",
+                  "const rows=(j.docs||[]).map(d=>{const s=d.sourceResource||{};const dt=(Array.isArray(s.date)?s.date[0]:s.date)||{};return [`<a href=\"${d.isShownAt||('https://dp.la/item/'+d.id)}\">${A(s.title).slice(0,110)}</a>`,dt.displayDate||'',A(s.type),A((s.spatial||[]).map?((s.spatial||[]).map(p=>p.name)):''),(d.dataProvider&&(d.dataProvider.name||d.dataProvider))||'',d.object?`<img src=\"${d.object}\" height=\"50\">`:''];});",
+                  "let fac='';if(j.facets){for(const [k,v] of Object.entries(j.facets)){const t=v.terms||v.entries||[];fac+=`<h4>${k}</h4><table>`+t.slice(0,40).map(f=>`<tr><td>${f.term||f.time||f.from||''}</td><td>${f.count}</td></tr>`).join('')+'</table>';}}",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif;margin-bottom:10px}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}th{background:#eee}</style><p><b>{{count}}</b> results</p><table><tr><th>Title</th><th>Date</th><th>Type</th><th>Place</th><th>Contributor</th><th></th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>{{{fac}}}`,{rows,count:j.count,fac});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    }
+  ],
+  "variable": [
+    {
+      "key": "dpla_api",
+      "value": "https://api.dp.la",
+      "type": "string"
+    },
+    {
+      "key": "dpla_api_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "you@example.com",
+      "type": "string"
+    },
+    {
+      "key": "query",
+      "value": "Bukovsky",
+      "type": "string"
+    },
+    {
+      "key": "phrase",
+      "value": "Austria-Hungary",
+      "type": "string"
+    },
+    {
+      "key": "place",
+      "value": "Passaic",
+      "type": "string"
+    },
+    {
+      "key": "state",
+      "value": "New Jersey",
+      "type": "string"
+    },
+    {
+      "key": "provider",
+      "value": "Digital Library of Georgia",
+      "type": "string"
+    },
+    {
+      "key": "lat",
+      "value": "40.8568",
+      "type": "string"
+    },
+    {
+      "key": "lon",
+      "value": "-74.1285",
+      "type": "string"
+    },
+    {
+      "key": "item_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "item_id_2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "collection_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "collection_title",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
